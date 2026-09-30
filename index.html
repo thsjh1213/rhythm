@@ -248,7 +248,7 @@
   }
   /* 쉼표 전용: 항상 보이는 회색 둥근 사각형 배경 (박자 길이만큼 폭을 채움) */
   .score-note.rest-note .glyph-wrap{
-    background:#E3E0EA;border:1.5px solid #C9C3DA;
+    background:rgba(227,224,234,.3);border:1.5px solid rgba(201,195,218,.5);
   }
   .score-note .label{
     position:relative;z-index:1;
@@ -582,13 +582,13 @@ const NOTE_DEFS = {
   eighthpair:   { beats:1,   label:'티티',       name:'8분음표',   glyph:'\u{1D160}\u{1D160}', fontSize:46, color:'var(--sky)',    bg:'rgba(222,235,255,.55)', kind:'note' },
   eighth:       { beats:0.5, label:'티',        name:'8분음표',   glyph:'\u{1D160}',          fontSize:46, color:'var(--sky)',    bg:'rgba(216,240,255,.55)', kind:'note' },
   half:         { beats:2,   label:'타아',       name:'2분음표',   glyph:'\u{1D15E}',          fontSize:46, color:'var(--grass)',  bg:'rgba(221,246,236,.55)', kind:'note' },
-  dottedQuarter:{ beats:1.5, label:'타.',       name:'점4분음표',  glyph:'\u{1D15F}',          fontSize:46, color:'var(--amber)',  bg:'rgba(255,234,196,.55)', kind:'note', dotted:true },
-  dottedHalf:   { beats:3,   label:'타아.',      name:'점2분음표',  glyph:'\u{1D15E}',          fontSize:46, color:'var(--indigo)', bg:'rgba(229,232,255,.55)', kind:'note', dotted:true },
-  whole:        { beats:4,   label:'온음표(4박)', name:'온음표',    glyph:'\u{1D15D}',         fontSize:46, color:'var(--berry)',  bg:'rgba(251,224,240,.55)', kind:'note' },
-  quarterRest:  { beats:1,   label:'쉿',        name:'4분쉼표',   glyph:'\u{1D13D}',          fontSize:46, color:'var(--plum)',   bg:'rgba(234,225,250,.55)', kind:'rest' },
-  eighthRest:   { beats:0.5, label:'쉬',        name:'8분쉼표',   glyph:'\u{1D13E}',          fontSize:46, color:'var(--plum)',   bg:'rgba(241,234,252,.55)', kind:'rest' },
-  halfRest:     { beats:2,   label:'쉬어(2박)',  name:'2분쉼표',   glyph:'\u{1D13C}',          fontSize:46, color:'var(--plum-dark)', bg:'rgba(255,242,207,.55)', kind:'rest' },
-  wholeRest:    { beats:4,   label:'쉬어(4박)',  name:'온쉼표',    glyph:'\u{1D13B}',          fontSize:46, color:'var(--plum-dark)', bg:'rgba(238,225,204,.55)', kind:'rest' },
+  dottedQuarter:{ beats:1.5, label:'타이',       name:'점4분음표',  glyph:'\u{1D15F}',          fontSize:46, color:'var(--amber)',  bg:'rgba(255,234,196,.55)', kind:'note', dotted:true },
+  dottedHalf:   { beats:3,   label:'타아아',      name:'점2분음표',  glyph:'\u{1D15E}',          fontSize:46, color:'var(--indigo)', bg:'rgba(229,232,255,.55)', kind:'note', dotted:true },
+  whole:        { beats:4,   label:'타아아아',   name:'온음표',    glyph:'\u{1D15D}',         fontSize:46, color:'var(--berry)',  bg:'rgba(251,224,240,.55)', kind:'note' },
+  quarterRest:  { beats:1,   label:'쉿',        name:'4분쉼표',   glyph:'\u{1D13D}',          fontSize:46, color:'var(--plum)',   bg:'rgba(234,225,250,.55)', kind:'rest', staffOffset:10, act2Offset:10 },
+  eighthRest:   { beats:0.5, label:'쉬',        name:'8분쉼표',   glyph:'\u{1D13E}',          fontSize:46, color:'var(--plum)',   bg:'rgba(241,234,252,.55)', kind:'rest', staffOffset:15, act2Offset:25 },
+  halfRest:     { beats:2,   label:'쉬어',      name:'2분쉼표',   glyph:'\u{1D13C}',          fontSize:46, color:'var(--plum-dark)', bg:'rgba(255,242,207,.55)', kind:'rest', staffOffset:-1, act2Offset:2 },
+  wholeRest:    { beats:4,   label:'쉬어어어',   name:'온쉼표',    glyph:'\u{1D13B}',          fontSize:46, color:'var(--plum-dark)', bg:'rgba(238,225,204,.55)', kind:'rest', staffOffset:14, act2Offset:13 },
 };
 const CARD_GLYPH_COLOR = '#332748'; /* 활동2 카드 보관함: 음표 색은 검정 계열로 통일, 대신 카드 배경색으로 구분 */
 
@@ -616,13 +616,25 @@ function tickMarksHTML(beats, full){
   return html;
 }
 
-function glyphHTML(type, colorOverride){
+function glyphHTML(type, colorOverride, alignToStaff, extraShift){
   const def = NOTE_DEFS[type];
   const col = colorOverride || def.color;
   const dot = def.dotted
     ? `<span class="aug-dot" style="color:${col};font-size:${Math.round(def.fontSize*0.16)}px;top:10px;">●</span>`
     : '';
-  return `<div class="note-visual"><span class="glyph" style="color:${col};font-size:${def.fontSize}px;line-height:1;font-family:'Noto Music','Segoe UI Symbol','Apple Symbols',serif;">${def.glyph}</span>${dot}</div>`;
+  /* 온쉼표(𝄻)·2분쉼표(𝄼)는 글리프 내부의 굵은 가로줄(bar)이 자기 글자상자
+     안에서 위/아래로 치우쳐 있어서, 그냥 세로 중앙정렬만 하면 악보의 기준
+     가로선과 겹치지 않는다. 악보(활동1)에서는 staffOffset, 활동2 카드에서는
+     act2Offset으로 각각 따로 맞춰준다.
+     extraShift는 모든 음표/쉼표에 공통으로 더해지는 전체 하강값. */
+  let offset = alignToStaff ? (def.staffOffset || 0) : (def.act2Offset || 0);
+  offset += (extraShift || 0);
+  /* 음표(쉼표 아님)는 오늘 오전 버전 위치가 더 나았다는 피드백으로 2px 위로 되돌림 */
+  if(def.kind === 'note') offset -= 2;
+  /* 활동1(alignToStaff=true) 악보의 음표는 추가로 2px 더 위로 */
+  if(def.kind === 'note' && alignToStaff) offset -= 2;
+  const transform = offset ? ` transform:translateY(${offset}px);` : '';
+  return `<div class="note-visual"><span class="glyph" style="color:${col};font-size:${def.fontSize}px;line-height:1;font-family:'Noto Music','Segoe UI Symbol','Apple Symbols',serif;${transform}">${def.glyph}</span>${dot}</div>`;
 }
 
 /* =====================================================================
@@ -817,7 +829,7 @@ function makeScoreNoteEl(type){
   wrap.style.width = (def.beats*UNIT) + 'px';
   const dividers = (isRest && def.beats > 1) ? restDividerHTML(def.beats) : '';
   wrap.innerHTML = `
-    <div class="glyph-wrap">${dividers}${glyphHTML(type)}</div>
+    <div class="glyph-wrap">${dividers}${glyphHTML(type, null, true, 3)}</div>
     <div class="label">${def.label}</div>`;
   return wrap;
 }
@@ -944,7 +956,7 @@ function renderPalette(){
     card.style.borderColor = def.color;
     card.innerHTML = `
       ${tickMarksHTML(def.beats, true)}
-      <div class="card-inner">${glyphHTML(type, CARD_GLYPH_COLOR)}<div class="label cardname">${beatCardLabel(type)}</div></div>`;
+      <div class="card-inner">${glyphHTML(type, CARD_GLYPH_COLOR, false, 3)}<div class="label cardname">${beatCardLabel(type)}</div></div>`;
     card.addEventListener('pointerdown', (e)=> onCardPointerDown(e, card, { mode:'new', type }));
     card.addEventListener('click', ()=> { if(!suppressNextClick) showCardInfo(type); });
     (def.kind === 'note' ? notesGroup : restsGroup).appendChild(card);
@@ -1165,7 +1177,7 @@ function renderBox(){
     el.innerHTML = `
       <div class="rm" title="지우기">✕</div>
       ${tickMarksHTML(def.beats, true)}
-      <div class="card-inner">${glyphHTML(c.type, CARD_GLYPH_COLOR)}<div class="label cardname">${beatCardLabel(c.type)}</div></div>`;
+      <div class="card-inner">${glyphHTML(c.type, CARD_GLYPH_COLOR, false, 3)}<div class="label cardname">${beatCardLabel(c.type)}</div></div>`;
 
     el.querySelector('.rm').addEventListener('click', (e)=>{
       e.stopPropagation();
